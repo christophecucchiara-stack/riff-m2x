@@ -1,0 +1,34 @@
+{
+  "users": [
+    {
+      "id": "7a2d0c69-4b33-4ca2-ac39-997a8d8f37c5",
+      "username": "christophe",
+      "password": "$2a$10$NUE0ff5HKKCO6OpocDiisemxlwQpgeBDhzXJRVuvoQcYkn/RdH6t2",
+      "displayName": "coutch",
+      "bio": "",
+      "avatarColor": "#7C5CFF",
+      "createdAt": "2026-07-14T07:20:55.823Z"
+    }
+  ],
+  "videos": [
+    {
+      "id": "025de5e8-f7ca-4a5e-ac2e-3ca89c36e614",
+      "userId": "7a2d0c69-4b33-4ca2-ac39-997a8d8f37c5",
+      "url": "13bac099-c7b2-4e44-b13b-d5e2eae15596.mp4",
+      "caption": "mister 2x",
+      "sound": "Son original - christophe",
+      "likes": [],
+      "createdAt": "2026-07-14T07:23:10.610Z"
+    },
+    {
+      "id": "b3feaadd-eb36-4400-aac5-6c55b1c41818",
+      "userId": "7a2d0c69-4b33-4ca2-ac39-997a8d8f37c5",
+      "url": "18b5f730-3904-499c-a745-4712d7f3a89f.mp4",
+      "caption": "mister 2x",
+      "sound": "Son original - christophe",
+      "likes": [],
+      "createdAt": "2026-07-14T07:25:50.582Z"
+    }
+  ],
+  "comments": []
+}
