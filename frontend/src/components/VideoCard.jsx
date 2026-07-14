@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Heart, MessageCircle, Share2, Volume2, VolumeX, Play } from 'lucide-react';
 import api from '../api';
+import api, { resolveMediaUrl } from '../api'; // 🟢 On ajoute l'import ici
 import { useAuth } from '../context/AuthContext';
 import CommentsSheet from './CommentsSheet';
 import Mister2XAvatar from './Mister2XAvatar';
@@ -83,7 +84,15 @@ export default function VideoCard({ video, muted, onToggleMute }) {
     if (now - lastTap < 280) handleDoubleTap();
     else togglePlay();
     lastTap = now;
-  }
+  }{/* 🟢 On applique resolveMediaUrl sur video.url */}
+<video 
+  ref={videoRef} 
+  src={resolveMediaUrl(video.url)} 
+  loop 
+  muted={muted} 
+  playsInline 
+  preload="metadata" 
+/>
 
   async function handleShare() {
     const url = `${window.location.origin}/video/${video.id}`;
