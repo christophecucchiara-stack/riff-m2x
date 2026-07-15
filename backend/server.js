@@ -13,7 +13,20 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+// ... (tes imports)
+const fs = require('fs'); // 🟢 Ajoute cet import en haut s'il n'y est pas
 
+// ... (ton app = express())
+
+// 🟢 Ajoute ce bloc pour forcer la création du dossier physique
+const uploadsPath = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+  console.log('Dossier "uploads" créé avec succès !');
+}
+
+// Fichiers vidéo uploadés, servis statiquement
+app.use('/uploads', express.static(uploadsPath));
 // Fichiers vidéo uploadés, servis statiquement
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
