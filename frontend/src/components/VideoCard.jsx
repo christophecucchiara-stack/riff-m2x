@@ -86,7 +86,7 @@ export default function VideoCard({ video, muted, onToggleMute }) {
   }{/* 🟢 On applique resolveMediaUrl sur video.url */}
 <video 
   ref={videoRef} 
-  src={resolveMediaUrl(video.url)} 
+  src={video.url} 
   loop 
   muted={muted} 
   playsInline 
