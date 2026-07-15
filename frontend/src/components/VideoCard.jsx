@@ -103,7 +103,7 @@ export default function VideoCard({ video, muted, onToggleMute }) {
     }
     setTimeout(() => setShareLabel('Partager'), 1600);
   }
-
+console.log("Adresse de la vidéo lue :", video.url);
   return (
     <div className="video-card" ref={containerRef}>
       <video ref={videoRef} src={video.url} loop muted={muted} playsInline preload="metadata" />
