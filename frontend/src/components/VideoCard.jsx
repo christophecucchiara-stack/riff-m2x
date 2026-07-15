@@ -1,7 +1,7 @@
 // components/VideoCard.jsx
 import { useEffect, useRef, useState } from 'react';
 import { Heart, MessageCircle, Share2, Volume2, VolumeX, Play } from 'lucide-react';
-import api, { resolveMediaUrl } from '../api'; // 🟢 Une seule ligne propre pour importer les deux !
+import api from '../api';// 🟢 Une seule ligne propre pour importer les deux !
 import { useAuth } from '../context/AuthContext';
 import CommentsSheet from './CommentsSheet';
 import Mister2XAvatar from './Mister2XAvatar';

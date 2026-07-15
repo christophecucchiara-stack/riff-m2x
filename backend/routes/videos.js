@@ -3,30 +3,34 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const { v4: uuid } = require('uuid');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const { readDb, writeDb } = require('../db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// --- Stockage des vidéos uploadées sur le disque local ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.mp4';
-    cb(null, `${uuid()}${ext}`);
+// Configuration Cloudinary avec tes futures variables d'environnement
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configuration du stockage pour envoyer directement sur Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'riff_videos',
+    resource_type: 'video', // Très important pour supporter les fichiers .mp4
+    public_id: (req, file) => uuid(),
   },
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100 Mo
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('video/')) {
-      return cb(new Error('Seuls les fichiers vidéo sont acceptés.'));
-    }
-    cb(null, true);
-  },
+  limits: { fileSize: 100 * 1024 * 1024 }, // Limite à 100 Mo par vidéo
 });
 
 function toPublicVideo(video, db, currentUserId) {
@@ -35,7 +39,7 @@ function toPublicVideo(video, db, currentUserId) {
 
   return {
     id: video.id,
-    url: video.url.startsWith('http') ? video.url : `/uploads/${path.basename(video.url)}`,
+    url: video.url, // Cloudinary donne directement une URL HTTPS absolue (plus besoin de resolveMediaUrl !)
     caption: video.caption,
     sound: video.sound,
     createdAt: video.createdAt,
@@ -53,7 +57,7 @@ function toPublicVideo(video, db, currentUserId) {
   };
 }
 
-// GET /api/videos?cursor=0&limit=5
+// GET /api/videos
 router.get('/', optionalAuth, (req, res) => {
   const db = readDb();
   const limit = Math.min(parseInt(req.query.limit, 10) || 5, 20);
@@ -71,7 +75,7 @@ router.get('/', optionalAuth, (req, res) => {
   });
 });
 
-// POST /api/videos  (multipart/form-data : champ "video", "caption", "sound")
+// POST /api/videos (Envoi de la vidéo vers Cloudinary)
 router.post('/', requireAuth, upload.single('video'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Ajoute un fichier vidéo.' });
@@ -81,7 +85,7 @@ router.post('/', requireAuth, upload.single('video'), (req, res) => {
   const video = {
     id: uuid(),
     userId: req.userId,
-    url: req.file.filename,
+    url: req.file.path, // 🟢 Récupère l'URL sécurisée générée par Cloudinary !
     caption: (req.body.caption || '').slice(0, 300),
     sound: req.body.sound?.trim() || 'Son original',
     likes: [],
@@ -94,7 +98,7 @@ router.post('/', requireAuth, upload.single('video'), (req, res) => {
   res.status(201).json({ video: toPublicVideo(video, db, req.userId) });
 });
 
-// POST /api/videos/:id/like  -> ajoute ou retire le like de l'utilisateur courant
+// POST /api/videos/:id/like
 router.post('/:id/like', requireAuth, (req, res) => {
   const db = readDb();
   const video = db.videos.find((v) => v.id === req.params.id);
@@ -133,7 +137,7 @@ router.get('/:id/comments', (req, res) => {
   res.json({ comments });
 });
 
-// POST /api/videos/:id/comments  { text }
+// POST /api/videos/:id/comments
 router.post('/:id/comments', requireAuth, (req, res) => {
   const { text } = req.body;
   if (!text || !text.trim()) {
