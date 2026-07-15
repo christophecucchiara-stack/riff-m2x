@@ -21,7 +21,22 @@ export default function Register() {
       await register(username, password, displayName);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Inscription impossible.');
+      // 🟢 Sécurité : On extrait uniquement du texte pour éviter le crash "React error #31"
+      let errorMessage = 'Inscription impossible.';
+
+      if (err.response?.data) {
+        const serverError = err.response.data;
+        // Si le serveur renvoie un objet d'erreur, on cherche la clé de texte (error ou message)
+        if (typeof serverError === 'object') {
+          errorMessage = serverError.error || serverError.message || JSON.stringify(serverError);
+        } else if (typeof serverError === 'string') {
+          errorMessage = serverError;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
