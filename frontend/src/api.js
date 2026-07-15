@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // On récupère l'adresse de l'API définie dans les variables d'environnement Vercel (Render),
 // et on garde localhost en secours pour le développement local.
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE_URL = 'https://riff-m2x.onrender.com';
 
 const api = axios.create({ 
   baseURL: `${API_BASE_URL}/api` 
