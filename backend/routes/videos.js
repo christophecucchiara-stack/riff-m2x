@@ -3,43 +3,35 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const { v4: uuid } = require('uuid');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const { readDb, writeDb } = require('../db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Configuration Cloudinary avec tes futures variables d'environnement
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Configuration du stockage pour envoyer directement sur Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'riff_videos',
-    resource_type: 'video', // Très important pour supporter les fichiers .mp4
-    public_id: (req, file) => uuid(),
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.mp4';
+    cb(null, `${uuid()}${ext}`);
   },
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // Limite à 100 Mo par vidéo
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('video/')) return cb(new Error('Seuls les fichiers vidéo sont acceptés.'));
+    cb(null, true);
+  },
 });
 
 function toPublicVideo(video, db, currentUserId) {
   const author = db.users.find((u) => u.id === video.userId);
   const commentCount = db.comments.filter((c) => c.videoId === video.id).length;
-
   return {
     id: video.id,
-    url: video.url, // Cloudinary donne directement une URL HTTPS absolue (plus besoin de resolveMediaUrl !)
+    url: video.url.startsWith('http') ? video.url : `/uploads/${path.basename(video.url)}`,
     caption: video.caption,
     sound: video.sound,
     createdAt: video.createdAt,
@@ -47,27 +39,32 @@ function toPublicVideo(video, db, currentUserId) {
     commentCount,
     hasLiked: currentUserId ? video.likes.includes(currentUserId) : false,
     author: author
-      ? {
-          id: author.id,
-          username: author.username,
-          displayName: author.displayName,
-          avatarColor: author.avatarColor,
-        }
+      ? { id: author.id, username: author.username, displayName: author.displayName, avatarColor: author.avatarColor }
       : null,
   };
 }
 
-// GET /api/videos
+// GET /api/videos?cursor=0&limit=5&tab=following
 router.get('/', optionalAuth, (req, res) => {
   const db = readDb();
   const limit = Math.min(parseInt(req.query.limit, 10) || 5, 20);
   const cursor = parseInt(req.query.cursor, 10) || 0;
+  const tab = req.query.tab || 'forYou';
 
-  const sorted = [...db.videos].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
-  const page = sorted.slice(cursor, cursor + limit);
-  const nextCursor = cursor + limit < sorted.length ? cursor + limit : null;
+  let pool = [...db.videos];
+
+  // Onglet "abonnements" : ne montrer que les vidéos des comptes suivis
+  if (tab === 'following' && req.userId) {
+    const follows = db.follows || [];
+    const followingIds = follows
+      .filter((f) => f.followerId === req.userId)
+      .map((f) => f.followingId);
+    pool = pool.filter((v) => followingIds.includes(v.userId));
+  }
+
+  pool.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const page = pool.slice(cursor, cursor + limit);
+  const nextCursor = cursor + limit < pool.length ? cursor + limit : null;
 
   res.json({
     videos: page.map((v) => toPublicVideo(v, db, req.userId)),
@@ -75,26 +72,22 @@ router.get('/', optionalAuth, (req, res) => {
   });
 });
 
-// POST /api/videos (Envoi de la vidéo vers Cloudinary)
+// POST /api/videos
 router.post('/', requireAuth, upload.single('video'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Ajoute un fichier vidéo.' });
-  }
+  if (!req.file) return res.status(400).json({ error: 'Ajoute un fichier vidéo.' });
 
   const db = readDb();
   const video = {
     id: uuid(),
     userId: req.userId,
-    url: req.file.path, // 🟢 Récupère l'URL sécurisée générée par Cloudinary !
+    url: req.file.filename,
     caption: (req.body.caption || '').slice(0, 300),
     sound: req.body.sound?.trim() || 'Son original',
     likes: [],
     createdAt: new Date().toISOString(),
   };
-
   db.videos.push(video);
   writeDb(db);
-
   res.status(201).json({ video: toPublicVideo(video, db, req.userId) });
 });
 
@@ -108,7 +101,6 @@ router.post('/:id/like', requireAuth, (req, res) => {
   video.likes = already
     ? video.likes.filter((id) => id !== req.userId)
     : [...video.likes, req.userId];
-
   writeDb(db);
   res.json({ likeCount: video.likes.length, hasLiked: !already });
 });
@@ -140,9 +132,7 @@ router.get('/:id/comments', (req, res) => {
 // POST /api/videos/:id/comments
 router.post('/:id/comments', requireAuth, (req, res) => {
   const { text } = req.body;
-  if (!text || !text.trim()) {
-    return res.status(400).json({ error: 'Le commentaire est vide.' });
-  }
+  if (!text?.trim()) return res.status(400).json({ error: 'Le commentaire est vide.' });
 
   const db = readDb();
   const video = db.videos.find((v) => v.id === req.params.id);

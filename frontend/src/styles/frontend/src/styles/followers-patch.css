@@ -1,0 +1,35 @@
+/* Style pour le compteur et le bouton de Followers */
+.followers-count {
+  font-weight: bold;
+  color: #ffffff;
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.btn-follow {
+  background-color: #fe2c55; /* Rouge TikTok */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-follow:hover {
+  background-color: #e12247;
+}
+
+.btn-following {
+  background-color: #333333;
+  color: #eeeeee;
+  border: 1px solid #555555;
+}
+
+/* Ajustement pour l'affichage dans le profil */
+.profile-stats {
+  display: flex;
+  gap: 15px;
+  margin: 10px 0;
+}
