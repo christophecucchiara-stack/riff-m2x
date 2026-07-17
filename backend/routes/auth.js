@@ -80,27 +80,32 @@ router.get('/me', requireAuth, (req, res) => {
 // backend/routes/auth.js
 
 // Route pour mettre à jour l'avatar/logo d'un utilisateur
-router.put('/profile', authMiddleware, async (req, res) => {
+router.put('/profile', requireAuth, async (req, res) => {
   try {
     const { avatarUrl } = req.body;
     
-    // req.user.id provient de ton middleware d'authentification (qui valide le token)
-    const userId = req.user.id; 
+    if (!avatarUrl) {
+      return res.status(400).json({ error: "L'URL de l'avatar est requise." });
+    }
 
-    // 1. Si tu utilises un fichier db.json (Lowdb / JSON) :
-    // Tu récupères l'utilisateur et tu lui associes le nouvel avatarUrl.
-    // Exemple avec lowdb :
-    // db.get('users').find({ id: userId }).assign({ avatarUrl }).write();
+    const db = readDb();
     
-    // 2. Si tu utilises une base de données classique (MongoDB / Mongoose) :
-    // await User.findByIdAndUpdate(userId, { avatarUrl });
+    // On cherche l'utilisateur dans ta base db.json
+    const userIndex = db.users.findIndex((u) => u.id === req.userId);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+    }
 
-    // Récupère l'utilisateur mis à jour pour le renvoyer au frontend
-    const updatedUser = { ...req.user, avatarUrl }; 
+    // On applique le nouvel avatarUrl à l'utilisateur
+    db.users[userIndex].avatarUrl = avatarUrl;
+    
+    // On sauvegarde définitivement dans ton fichier db.json
+    writeDb(db);
 
     res.json({ 
-      message: "Avatar mis à jour !", 
-      user: updatedUser 
+      message: "Avatar mis à jour avec succès !", 
+      user: publicUser(db.users[userIndex]) 
     });
   } catch (error) {
     console.error(error);
