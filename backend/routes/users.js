@@ -1,3 +1,4 @@
+
 // routes/users.js
 const path = require('path');
 const express = require('express');
@@ -39,6 +40,7 @@ router.get('/:username', optionalAuth, (req, res) => {
       displayName: user.displayName,
       bio: user.bio,
       avatarColor: user.avatarColor,
+      avatarUrl: user.avatarUrl || null, // 🟢 AJOUT : On transmet le logo personnalisé
     },
     videos,
     stats: { videoCount: videos.length, totalLikes, followerCount, followingCount },
@@ -83,7 +85,13 @@ router.get('/:username/followers', (req, res) => {
   const followerIds = follows.filter((f) => f.followingId === user.id).map((f) => f.followerId);
   const followers = db.users
     .filter((u) => followerIds.includes(u.id))
-    .map((u) => ({ id: u.id, username: u.username, displayName: u.displayName, avatarColor: u.avatarColor }));
+    .map((u) => ({ 
+      id: u.id, 
+      username: u.username, 
+      displayName: u.displayName, 
+      avatarColor: u.avatarColor,
+      avatarUrl: u.avatarUrl || null // 🟢 AJOUT : Transmis pour la liste des abonnés
+    }));
 
   res.json({ followers });
 });
@@ -98,7 +106,13 @@ router.get('/:username/following', (req, res) => {
   const followingIds = follows.filter((f) => f.followerId === user.id).map((f) => f.followingId);
   const following = db.users
     .filter((u) => followingIds.includes(u.id))
-    .map((u) => ({ id: u.id, username: u.username, displayName: u.displayName, avatarColor: u.avatarColor }));
+    .map((u) => ({ 
+      id: u.id, 
+      username: u.username, 
+      displayName: u.displayName, 
+      avatarColor: u.avatarColor,
+      avatarUrl: u.avatarUrl || null // 🟢 AJOUT : Transmis pour la liste des abonnements
+    }));
 
   res.json({ following });
 });
