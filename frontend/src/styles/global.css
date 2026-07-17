@@ -138,3 +138,6 @@ h1, h2, h3 {
 }
 
 .count { font-family: var(--font-mono); }
+.avatar:hover .avatar-hover {
+  opacity: 1 !important;
+}

@@ -77,5 +77,34 @@ router.get('/me', requireAuth, (req, res) => {
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
   res.json({ user: publicUser(user) });
 });
+// backend/routes/auth.js
 
+// Route pour mettre à jour l'avatar/logo d'un utilisateur
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { avatarUrl } = req.body;
+    
+    // req.user.id provient de ton middleware d'authentification (qui valide le token)
+    const userId = req.user.id; 
+
+    // 1. Si tu utilises un fichier db.json (Lowdb / JSON) :
+    // Tu récupères l'utilisateur et tu lui associes le nouvel avatarUrl.
+    // Exemple avec lowdb :
+    // db.get('users').find({ id: userId }).assign({ avatarUrl }).write();
+    
+    // 2. Si tu utilises une base de données classique (MongoDB / Mongoose) :
+    // await User.findByIdAndUpdate(userId, { avatarUrl });
+
+    // Récupère l'utilisateur mis à jour pour le renvoyer au frontend
+    const updatedUser = { ...req.user, avatarUrl }; 
+
+    res.json({ 
+      message: "Avatar mis à jour !", 
+      user: updatedUser 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Impossible de mettre à jour l'avatar." });
+  }
+});
 module.exports = router;
